@@ -70,6 +70,6 @@ JOTT is a local AI-powered notation application that allows users to record, tra
 - OpenAI Whisper API
 - Anthropic Claude API
 
-## Development
+## Development Stage
 
-### Available Scripts
+- pre-alpha
