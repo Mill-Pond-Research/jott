@@ -1,70 +1,75 @@
-# Getting Started with Create React App
+# JOTT - AI-Powered Voice Notation App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+JOTT is a local AI-powered notation application that allows users to record, transcribe, and elaborate on their ideas using advanced AI technologies.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- Voice recording with real-time waveform visualization
+- Speech-to-text transcription using OpenAI's Whisper API
+- AI-powered text elaboration using Claude 3.5 Sonnet API
+- [WIP] Card and deck organization with drag-and-drop functionality
+- Rich text editing for transcriptions and elaborations
+- Local data storage for offline use
 
-### `npm start`
+## Getting Started
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Prerequisites
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- Node.js (v14 or later)
+- npm (v6 or later)
 
-### `npm test`
+### Installation
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. Clone the repository:
+   ```
+   git clone https://github.com/Mill-Pond-Research/jott.git
+   cd jott
+   ```
 
-### `npm run build`
+2. Install dependencies:
+   ```
+   npm install
+   ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+3. Create a `.env` file in the root directory and add your API keys:
+   ```
+   REACT_APP_OPENAI_API_KEY=your_openai_api_key
+   REACT_APP_ANTHROPIC_API_KEY=your_anthropic_api_key
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+4. Start the development server:
+   ```
+   npm start
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to view the app.
 
-### `npm run eject`
+## Usage
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1. Create a new card by clicking the "Create New Card" button in the header.
+2. Record audio using the built-in recorder or upload an existing audio file.
+3. Transcribe the audio using the "Transcribe" button.
+4. Edit the transcription if needed.
+5. Generate an AI elaboration by clicking the "Elaborate" button.
+6. Organize cards into decks using drag-and-drop functionality.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Project Structure
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+- `src/components`: React components for the user interface
+- `src/services`: API integration for Whisper and Claude
+- `src/App.js`: Main application component
+- `src/index.js`: Entry point of the application
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Technologies Used
 
-## Learn More
+- React
+- Tailwind CSS
+- Draft.js
+- React DnD
+- Framer Motion
+- OpenAI Whisper API
+- Anthropic Claude API
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Development
 
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### Available Scripts
