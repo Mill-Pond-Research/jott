@@ -1,18 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useDrop } from 'react-dnd';
-import { FiMove, FiTrash2 } from 'react-icons/fi';
+import { FiTrash2 } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 
-const Deck = ({ id, name, cards, onUpdate, onDelete, moveCardToDeck }) => {
+const Deck = ({ id, name, cards, onUpdate, onDelete }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [deckName, setDeckName] = useState(name);
   const titleInputRef = useRef(null);
-
-  const [, drop] = useDrop({
-    accept: 'CARD',
-    drop: (item) => {
-      moveCardToDeck(item.id, id);
-    },
-  });
 
   const handleTitleClick = () => {
     setIsEditingTitle(true);
@@ -25,7 +18,7 @@ const Deck = ({ id, name, cards, onUpdate, onDelete, moveCardToDeck }) => {
   const handleTitleBlur = () => {
     setIsEditingTitle(false);
     if (deckName.trim() !== name) {
-      onUpdate(id, { name: deckName.trim() });
+      onUpdate(id, deckName.trim());
     }
   };
 
@@ -51,9 +44,8 @@ const Deck = ({ id, name, cards, onUpdate, onDelete, moveCardToDeck }) => {
   };
 
   return (
-    <div ref={drop} className="bg-white shadow-lg rounded-lg overflow-hidden transition-all duration-300">
-      <div className="bg-gradient-to-r from-purple-500 to-indigo-500 p-2 flex justify-between items-center">
-        <FiMove className="text-white cursor-move" size={24} />
+    <div className="bg-white shadow-lg rounded-lg overflow-hidden transition-all duration-300">
+      <div className="bg-gradient-to-r from-purple-500 to-indigo-500 p-2 flex justify-end items-center">
         <button
           onClick={handleDelete}
           className="text-white hover:text-red-500 transition-colors duration-200"
@@ -81,9 +73,26 @@ const Deck = ({ id, name, cards, onUpdate, onDelete, moveCardToDeck }) => {
           </h3>
         )}
         <p className="text-gray-600">{cards.length} cards</p>
+        <Link to={`/deck/${id}`}>
+          <button className="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+            Open Deck
+          </button>
+        </Link>
       </div>
     </div>
   );
 };
+
+function DeckItem({ deck }) {
+  return (
+    <li>
+      <h3>{deck.name}</h3>
+      <p>Cards: {deck.cards.length}</p>
+      <Link to={`/deck/${deck.id}`}>
+        <button>Open Deck</button>
+      </Link>
+    </li>
+  );
+}
 
 export default Deck;

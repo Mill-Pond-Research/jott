@@ -1,7 +1,6 @@
-import React from 'react';
-import { useDrag, useDrop } from 'react-dnd';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { FiMove, FiTrash2 } from 'react-icons/fi';
+import { FiTrash2, FiEdit, FiPlay, FiPause } from 'react-icons/fi';
 import AudioRecorder from './AudioRecorder';
 import ElaborationDisplay from './ElaborationDisplay';
 import TranscriptionEditor from './TranscriptionEditor';
@@ -10,55 +9,33 @@ import WaveformVisualizer from './WaveformVisualizer';
 import { transcribeAudio } from '../services/whisperAPI';
 import { generateElaboration } from '../services/claudeAPI';
 
-const Card = ({ id, index, moveCard, title, content, audioUrl, transcription, elaboration, onUpdate, onDelete }) => {
-  const [{ isDragging }, drag] = useDrag({
-    type: 'CARD',
-    item: { id, index },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
+const Card = ({ id, title, content, audioUrl, transcription, elaboration, onUpdate, onDelete, decks, addCardToDeck }) => {
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isElaborating, setIsElaborating] = useState(false);
+  const [error, setError] = useState(null);
 
-  const [, drop] = useDrop({
-    accept: 'CARD',
-    hover(item, monitor) {
-      if (!drag) {
-        return;
-      }
-      const dragIndex = item.index;
-      const hoverIndex = index;
-      if (dragIndex === hoverIndex) {
-        return;
-      }
-      moveCard(dragIndex, hoverIndex);
-      item.index = hoverIndex;
-    },
-  });
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [cardTitle, setCardTitle] = useState(title);
+  const titleInputRef = useRef(null);
 
-  const [isRecording, setIsRecording] = React.useState(false);
-  const [isPaused, setIsPaused] = React.useState(false);
-  const [audioBlob, setAudioBlob] = React.useState(null);
-  const [isPlaying, setIsPlaying] = React.useState(false);
-  const [duration, setDuration] = React.useState(0);
-  const [currentTime, setCurrentTime] = React.useState(0);
-  const [isTranscribing, setIsTranscribing] = React.useState(false);
-  const [isElaborating, setIsElaborating] = React.useState(false);
-  const [error, setError] = React.useState(null);
+  const audioRef = useRef(new Audio());
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const sourceNodeRef = useRef(null);
 
-  const [isEditingTitle, setIsEditingTitle] = React.useState(false);
-  const [cardTitle, setCardTitle] = React.useState(title);
-  const titleInputRef = React.useRef(null);
+  const [selectedDeck, setSelectedDeck] = useState('');
 
-  const audioRef = React.useRef(new Audio());
-  const audioContextRef = React.useRef(null);
-  const analyserRef = React.useRef(null);
-  const sourceNodeRef = React.useRef(null);
-
-  const handleUpdate = React.useCallback((updateData) => {
+  const handleUpdate = useCallback((updateData) => {
     onUpdate(id, updateData);
   }, [id, onUpdate]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const audio = audioRef.current;
 
     const onLoadedMetadata = () => {
@@ -193,7 +170,7 @@ const Card = ({ id, index, moveCard, title, content, audioUrl, transcription, el
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus();
     }
@@ -205,17 +182,18 @@ const Card = ({ id, index, moveCard, title, content, audioUrl, transcription, el
     }
   };
 
+  const handleDeckChange = (e) => {
+    const deckId = e.target.value;
+    console.log(`Selected deck: ${deckId}`);
+    console.log('Available decks:', decks);
+    setSelectedDeck(deckId);
+    if (deckId && deckId !== "") {
+      addCardToDeck(id, deckId);
+    }
+  };
+
   return (
     <motion.div
-      ref={(node) => drag(drop(node))}
-      style={{
-        opacity: isDragging ? 0.5 : 1,
-        cursor: 'move',
-      }}
-      whileDrag={{
-        scale: 1.05,
-        boxShadow: '0px 5px 10px rgba(0,0,0,0.1)',
-      }}
       layout
       transition={{
         type: 'spring',
@@ -224,16 +202,7 @@ const Card = ({ id, index, moveCard, title, content, audioUrl, transcription, el
       }}
       className="bg-white shadow-lg rounded-lg overflow-hidden transition-all duration-300 card-transition"
     >
-      <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-2 flex justify-between items-center">
-        <FiMove className="text-white cursor-move" size={24} />
-        <button
-          onClick={handleDelete}
-          className="text-white hover:text-red-500 transition-colors duration-200"
-        >
-          <FiTrash2 size={24} />
-        </button>
-      </div>
-      <div className="p-6">
+      <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-4 flex justify-between items-center">
         {isEditingTitle ? (
           <input
             ref={titleInputRef}
@@ -242,25 +211,60 @@ const Card = ({ id, index, moveCard, title, content, audioUrl, transcription, el
             onChange={handleTitleChange}
             onBlur={handleTitleBlur}
             onKeyDown={handleTitleKeyDown}
-            className="text-xl font-semibold mb-4 w-full border-b-2 border-blue-500 focus:outline-none focus:border-blue-700"
+            className="text-xl font-semibold text-white bg-transparent border-b-2 border-white focus:outline-none focus:border-blue-200 w-full"
           />
         ) : (
           <h3 
-            className="text-xl font-semibold mb-4 cursor-pointer hover:text-blue-600 transition-colors duration-200"
+            className="text-xl font-semibold text-white cursor-pointer hover:text-blue-200 transition-colors duration-200 flex items-center"
             onClick={handleTitleClick}
           >
             {cardTitle}
+            <FiEdit className="ml-2" size={16} />
           </h3>
         )}
-        
-        <AudioRecorder
-          isRecording={isRecording}
-          isPaused={isPaused}
-          onStart={handleRecordingStart}
-          onStop={handleRecordingStop}
-          onPause={handleRecordingPause}
-          onResume={handleRecordingResume}
-        />
+        <div className="flex items-center">
+          <select
+            value={selectedDeck}
+            onChange={handleDeckChange}
+            className="mr-2 text-sm border-none bg-blue-500 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-white transition-colors duration-200 hover:bg-blue-600 cursor-pointer appearance-none px-3 py-1"
+          >
+            <option value="" className="bg-white text-gray-800">Add to deck</option>
+            {decks && decks.map((deck) => (
+              <option key={deck.id} value={deck.id} className="bg-white text-gray-800">
+                {typeof deck.name === 'string' ? deck.name : JSON.stringify(deck.name)}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleDelete}
+            className="text-white hover:text-red-300 transition-colors duration-200"
+          >
+            <FiTrash2 size={20} />
+          </button>
+        </div>
+      </div>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-4">
+          <AudioRecorder
+            isRecording={isRecording}
+            isPaused={isPaused}
+            onStart={handleRecordingStart}
+            onStop={handleRecordingStop}
+            onPause={handleRecordingPause}
+            onResume={handleRecordingResume}
+          />
+          {audioUrl && (
+            <div className="flex items-center">
+              <button
+                className="bg-blue-500 hover:bg-blue-600 text-white font-bold p-2 rounded-full mr-2"
+                onClick={handlePlayPause}
+              >
+                {isPlaying ? <FiPause size={20} /> : <FiPlay size={20} />}
+              </button>
+              <span className="text-sm text-gray-600">{formatTime(currentTime)} / {formatTime(duration)}</span>
+            </div>
+          )}
+        </div>
 
         {isRecording && (
           <div className="mt-4">
@@ -269,22 +273,9 @@ const Card = ({ id, index, moveCard, title, content, audioUrl, transcription, el
           </div>
         )}
 
-        {audioUrl && (
-          <div className="mt-4">
-            <audio ref={audioRef} src={audioUrl} />
-            <button
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded mr-2"
-              onClick={handlePlayPause}
-            >
-              {isPlaying ? 'Pause' : 'Play'}
-            </button>
-            <span>{formatTime(currentTime)} / {formatTime(duration)}</span>
-          </div>
-        )}
-
         {audioBlob && !transcription && (
           <button
-            className="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+            className="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded w-full"
             onClick={handleTranscribe}
             disabled={isTranscribing}
           >
@@ -300,7 +291,7 @@ const Card = ({ id, index, moveCard, title, content, audioUrl, transcription, el
             />
             {!elaboration && (
               <button
-                className="mt-2 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded"
+                className="mt-2 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded w-full"
                 onClick={handleElaborate}
                 disabled={isElaborating}
               >
@@ -318,7 +309,7 @@ const Card = ({ id, index, moveCard, title, content, audioUrl, transcription, el
         )}
 
         {error && (
-          <div className="mt-4 text-red-500">{error}</div>
+          <div className="mt-4 text-red-500 bg-red-100 border border-red-400 rounded p-2">{error}</div>
         )}
       </div>
     </motion.div>

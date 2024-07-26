@@ -1,82 +1,11 @@
 // src/HomePage.js
 import React, { useState, useCallback, useEffect } from 'react';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import Header from './Header';
 import Footer from './Footer';
 import Card from './Card';
 import Deck from './Deck';
 import { v4 as uuidv4 } from 'uuid';
 import { debounce } from 'lodash';
-
-const ItemTypes = {
-  CARD: 'card',
-  DECK: 'deck',
-};
-
-const DraggableCard = ({ card, index, moveCard, onUpdate, onDelete }) => {
-  const [{ isDragging }, drag] = useDrag({
-    type: ItemTypes.CARD,
-    item: { id: card.id, index, type: ItemTypes.CARD },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
-
-  const [, drop] = useDrop({
-    accept: ItemTypes.CARD,
-    hover(item, monitor) {
-      if (!drag) {
-        return;
-      }
-      if (item.index === index) {
-        return;
-      }
-      moveCard(item.index, index);
-      item.index = index;
-    },
-  });
-
-  return (
-    <div ref={(node) => drag(drop(node))} style={{ opacity: isDragging ? 0.5 : 1 }}>
-      <Card {...card} onUpdate={onUpdate} onDelete={onDelete} />
-    </div>
-  );
-};
-
-const DraggableDeck = ({ deck, index, moveDeck, onUpdate, cards, moveCardToDeck, onDelete }) => {
-  const [{ isDragging }, drag] = useDrag({
-    type: ItemTypes.DECK,
-    item: { id: deck.id, index, type: ItemTypes.DECK },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
-
-  const [, drop] = useDrop({
-    accept: [ItemTypes.DECK, ItemTypes.CARD],
-    hover(item, monitor) {
-      if (item.type === ItemTypes.DECK) {
-        if (item.index === index) {
-          return;
-        }
-        moveDeck(item.index, index);
-        item.index = index;
-      }
-    },
-    drop(item, monitor) {
-      if (item.type === ItemTypes.CARD) {
-        moveCardToDeck(item.id, deck.id);
-      }
-    },
-  });
-
-  return (
-    <div ref={(node) => drag(drop(node))} style={{ opacity: isDragging ? 0.5 : 1 }}>
-      <Deck {...deck} cards={cards} onUpdate={onUpdate} onDelete={onDelete} />
-    </div>
-  );
-};
 
 const HomePage = () => {
   const [cards, setCards] = useState([]);
@@ -103,58 +32,69 @@ const HomePage = () => {
     }
   }, [cards, decks, isLoading]);
 
-  const moveCard = useCallback((dragIndex, hoverIndex) => {
-    setCards((prevCards) => {
-      const newCards = [...prevCards];
-      const draggedCard = newCards[dragIndex];
-      newCards.splice(dragIndex, 1);
-      newCards.splice(hoverIndex, 0, draggedCard);
-      return newCards;
-    });
+  const addCardToDeck = useCallback((cardId, deckId) => {
+    console.log(`Adding card ${cardId} to deck ${deckId}`);
+    setDecks(prevDecks =>
+      prevDecks.map(deck =>
+        deck.id === deckId
+          ? { ...deck, cardIds: [...(deck.cardIds || []), cardId] }
+          : deck
+      )
+    );
+    setCards(prevCards =>
+      prevCards.map(card =>
+        card.id === cardId
+          ? { ...card, deckIds: [...(card.deckIds || []), deckId] }
+          : card
+      )
+    );
   }, []);
 
-  const moveDeck = useCallback((dragIndex, hoverIndex) => {
-    setDecks((prevDecks) => {
-      const newDecks = [...prevDecks];
-      const draggedDeck = newDecks[dragIndex];
-      newDecks.splice(dragIndex, 1);
-      newDecks.splice(hoverIndex, 0, draggedDeck);
-      return newDecks;
-    });
-  }, []);
+  const getUniqueNewCardTitle = (existingCards) => {
+    let newCardNumber = 0;
+    let newCardTitle = "New Card";
 
-  const moveCardToDeck = useCallback((cardId, newDeckId) => {
-    setCards(prevCards => prevCards.map(card => 
-      card.id === cardId ? { ...card, deckId: newDeckId } : card
-    ));
-    setDecks(prevDecks => prevDecks.map(deck => {
-      if (deck.id === newDeckId) {
-        return { ...deck, cards: [...deck.cards, cardId] };
-      } else {
-        return { ...deck, cards: deck.cards.filter(id => id !== cardId) };
-      }
-    }));
-  }, []);
+    while (existingCards.some(card => card.title === newCardTitle)) {
+      newCardNumber++;
+      newCardTitle = `New Card ${newCardNumber}`;
+    }
+
+    return newCardTitle;
+  };
 
   const createNewCard = useCallback(() => {
+    const newCardTitle = getUniqueNewCardTitle(cards);
     const newCard = {
       id: uuidv4(),
-      title: 'New Card',
+      title: newCardTitle,
       content: '',
       createdAt: new Date().toISOString(),
     };
     setCards(prevCards => [...prevCards, newCard]);
-  }, []);
+  }, [cards]);
 
   const createNewDeck = useCallback(() => {
+    const newDeckTitle = getUniqueNewDeckTitle(decks);
     const newDeck = {
       id: uuidv4(),
-      name: 'New Deck',
+      name: newDeckTitle,
       cards: [],
       createdAt: new Date().toISOString(),
     };
     setDecks(prevDecks => [...prevDecks, newDeck]);
-  }, []);
+  }, [decks]);
+  
+  const getUniqueNewDeckTitle = (existingDecks) => {
+    let newDeckNumber = 0;
+    let newDeckTitle = "New Deck";
+  
+    while (existingDecks.some(deck => deck.name === newDeckTitle)) {
+      newDeckNumber++;
+      newDeckTitle = `New Deck ${newDeckNumber}`;
+    }
+  
+    return newDeckTitle;
+  };
 
   const updateCardContent = useCallback((cardId, newContent) => {
     setCards(prevCards =>
@@ -189,12 +129,14 @@ const HomePage = () => {
   );
 
   const filteredDecks = decks.filter(deck =>
-    deck.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    deck.cards.some(cardId => {
+    (typeof deck.name === 'string' && deck.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (Array.isArray(deck.cards) && deck.cards.some(cardId => {
       const card = cards.find(c => c.id === cardId);
-      return card && (card.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        card.content.toLowerCase().includes(searchTerm.toLowerCase()));
-    })
+      return card && (
+        (typeof card.title === 'string' && card.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (typeof card.content === 'string' && card.content.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }))
   );
 
   const handleDeleteDeck = useCallback((deckId) => {
@@ -209,53 +151,42 @@ const HomePage = () => {
   }
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className="flex flex-col min-h-screen bg-gray-100">
-        <Header onCreateNewCard={createNewCard} onSearch={handleSearchChange} />
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold mb-4 text-gray-800">Welcome to JOTT</h1>
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4 text-gray-700">Cards</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCards.filter(card => !card.deckId).map((card, index) => (
-                <DraggableCard
+    <div className="flex flex-col min-h-screen bg-gray-100">
+      <Header onCreateNewCard={createNewCard} onCreateNewDeck={createNewDeck} onSearch={handleSearchChange} />
+      <main className="flex-grow container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-4 text-gray-800">Welcome to JOTT</h1>
+        <div className="mb-8">
+          <h2 className="text-2xl font-semibold mb-4 text-gray-700">Cards</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredCards.filter(card => !card.deckId).map((card) => (
+                <Card
                   key={card.id}
-                  card={card}
-                  index={index}
-                  moveCard={moveCard}
+                  {...card}
+                  decks={decks}
                   onUpdate={updateCardContent}
                   onDelete={onDelete}
+                  addCardToDeck={addCardToDeck}
                 />
               ))}
-            </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-semibold mb-4 text-gray-700">Decks</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredDecks.map((deck, index) => (
-                <DraggableDeck
+        </div>
+        <div>
+          <h2 className="text-2xl font-semibold mb-4 text-gray-700">Decks</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredDecks.map((deck) => (
+              <Deck
                 key={deck.id}
-                deck={deck}
-                index={index}
-                moveDeck={moveDeck}
+                {...deck}
                 onUpdate={updateDeckName}
                 onDelete={handleDeleteDeck}
                 cards={cards.filter(card => card.deckId === deck.id)}
-                moveCardToDeck={moveCardToDeck}  // Ensure this line is present
               />
-              ))}
-            </div>
+            ))}
           </div>
-          <button
-            className="mt-8 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out transform hover:scale-105"
-            onClick={createNewDeck}
-          >
-            Create New Deck
-          </button>
-        </main>
-        <Footer />
-      </div>
-    </DndProvider>
+        </div>
+      </main>
+      <Footer />
+    </div>
   );
 };
 
